@@ -1,0 +1,430 @@
+package app;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.Map.Entry;
+
+import commonui.FormConfirmBox;
+import commonui.FormDialogBox;
+import commonui.FrameNumberPad;
+import commonui.FrameNumberPadListener;
+import commonui.FrameTitleHeader;
+import commonui.FrameTitleHeaderListener;
+import externallib.StringLib;
+import om.PosCheck;
+import templatebuilder.TemplateBuilder;
+import virtualui.HeroActionProtocol;
+import virtualui.VirtualUIButton;
+import virtualui.VirtualUIFrame;
+import virtualui.VirtualUIImage;
+import virtualui.VirtualUILabel;
+import virtualui.VirtualUITextbox;
+import virtualui.VirtualUIWebView;
+
+/** interface for the listeners/observers callback method*/
+interface FrameFirstPageListener {
+	void frameFirstPage_clickOK();
+}
+
+public class FrameFirstPage extends VirtualUIFrame implements FrameTitleHeaderListener,FrameCommonBasketListener,FrameNumberPadListener {
+	TemplateBuilder m_oTemplateBuilder;
+	
+	private VirtualUIWebView m_oWebViewCheck;
+	private VirtualUIButton m_oButtonOK;
+	private FrameTitleHeader m_oTitleHeader;
+	//Juliezhang_20190409 start task2
+	private FrameNumberPad m_oFrameNumberPad;
+	private VirtualUITextbox m_oInputTxtbox;
+	//Juliezhang_20190409 end
+	//Juliezhang_20190410 start task2
+	private FrameCommonBasket m_oTrainListCommonBasket;
+	private int m_iCurrentPageStartNo;
+	public int m_iPageRecordCount;
+	private List<String> m_oColumnHeaderList;
+	private int m_iTrainListRowHeight;
+	private VirtualUIFrame m_oFramePage;
+	private VirtualUILabel m_oLblPage;
+	private VirtualUIImage m_oImgButtonPrevPage;
+	private VirtualUIImage m_oImgButtonNextPage;
+	private List<Long> m_oDisplayTrainList;
+	public List<Long> getm_oDisplayTrainList() {
+		return m_oDisplayTrainList;
+	}
+
+	public void setm_oDisplayTrainList(List<Long> m_oDisplayTrainList) {
+		this.m_oDisplayTrainList = m_oDisplayTrainList;
+	}
+	private String m_sInputValue;
+	//Juliezhang_20190410 end
+	/** list of interested listeners (observers, same thing)*/
+	private ArrayList<FrameFirstPageListener> listeners;
+	
+	/** add a new ModelListener observer for this Model*/
+	public void addListener(FrameFirstPageListener listener) {
+		listeners.add(listener);
+	}
+	
+	/** remove a ModelListener observer for this Model*/
+	public void removeListener(FrameFirstPageListener listener) {
+		listeners.remove(listener);
+	}
+	
+	/** remove all ModelListener observer for this Model*/
+	public void removeAllListener() {
+		listeners.clear();
+	}
+	
+	public FrameFirstPage() {
+		m_oTemplateBuilder = new TemplateBuilder();
+		listeners = new ArrayList<FrameFirstPageListener>();
+		// Load form from template file
+		m_oTemplateBuilder.loadTemplate("fraFirstPage.xml");
+		
+		// Header
+		m_oTitleHeader = new FrameTitleHeader();
+		m_oTemplateBuilder.buildFrame(m_oTitleHeader, "fraTitleHeader");
+		m_oTitleHeader.addListener(this);
+		m_oTitleHeader.init(false);
+		
+		m_oTitleHeader.setTitle(AppGlobal.g_oLang.get()._("report"));
+		this.attachChild(m_oTitleHeader);
+		
+		// Review Area
+		m_oWebViewCheck = new VirtualUIWebView();
+		m_oTemplateBuilder.buildWebView(m_oWebViewCheck, "wbvReport");
+		this.attachChild(m_oWebViewCheck);
+		
+		// OK button
+		m_oButtonOK = new VirtualUIButton();
+		m_oTemplateBuilder.buildButton(m_oButtonOK, "btnOK");
+		m_oButtonOK.setValue(AppGlobal.g_oLang.get()._("exit"));
+		m_oButtonOK.setVisible(true);
+		this.attachChild(m_oButtonOK);
+		// Create InputBox textbox
+		m_sInputValue = "";
+		m_oInputTxtbox = new VirtualUITextbox();
+		m_oTemplateBuilder.buildTextbox(m_oInputTxtbox, "txtbox");
+		m_oInputTxtbox.setFocusWhenShow(true);
+		m_oInputTxtbox.setVisible(true);
+		m_oInputTxtbox.setClickHideKeyboard(true);
+		this.attachChild(m_oInputTxtbox);
+		
+		//Juliezhang_20190409 start task2
+		// Number pad
+		m_oFrameNumberPad = new FrameNumberPad();
+		m_oTemplateBuilder.buildFrame(m_oFrameNumberPad, "fraNumberPad");
+		m_oFrameNumberPad.setFirstPage(true);
+		m_oFrameNumberPad.init();
+		m_oFrameNumberPad.setCancelAndEnterToLeftAndRigth(true);
+		m_oFrameNumberPad.setNumPadLeft(400);
+		m_oFrameNumberPad.addListener(this);
+		m_oFrameNumberPad.setEnterSubmitId(m_oInputTxtbox);
+		m_oFrameNumberPad.setVisible(true);
+		this.attachChild(m_oFrameNumberPad);
+		
+		//Juliezhang_20190409 end
+		//Juliezhang_20190410 start task2
+		m_oDisplayTrainList=new ArrayList<Long>();
+		m_oColumnHeaderList = new ArrayList<String>();
+		m_oTrainListCommonBasket = new FrameCommonBasket();
+		m_oTemplateBuilder.buildFrame(m_oTrainListCommonBasket, "scrfraTrainListPanel");
+		m_oTrainListCommonBasket.init();
+		m_oTrainListCommonBasket.setFirstPage(true);
+		m_oTrainListCommonBasket.addListener(this);
+		this.attachChild(m_oTrainListCommonBasket);
+		
+		m_iTrainListRowHeight = 36;
+
+		// Create prev page button
+		m_oImgButtonPrevPage = new VirtualUIImage();
+		m_oTemplateBuilder.buildImage(m_oImgButtonPrevPage, "ImgPrevPage");
+		m_oImgButtonPrevPage.allowClick(true);
+		m_oImgButtonPrevPage.setClickServerRequestBlockUI(false);
+		m_oImgButtonPrevPage.allowLongClick(true);
+		m_oImgButtonPrevPage.setLongClickServerRequestBlockUI(false);
+		this.attachChild(m_oImgButtonPrevPage);
+		
+		// Create next page button
+		m_oImgButtonNextPage = new VirtualUIImage();
+		m_oTemplateBuilder.buildImage(m_oImgButtonNextPage, "ImgNextPage");
+		m_oImgButtonNextPage.allowClick(true);
+		m_oImgButtonNextPage.setClickServerRequestBlockUI(false);
+		m_oImgButtonNextPage.allowLongClick(true);
+		m_oImgButtonNextPage.setLongClickServerRequestBlockUI(false);
+		this.attachChild(m_oImgButtonNextPage);
+		
+		//Create Page label
+		m_oFramePage = new VirtualUIFrame();
+		m_oTemplateBuilder.buildFrame(m_oFramePage, "fraPage");
+		m_oLblPage = new VirtualUILabel();
+		m_oTemplateBuilder.buildLabel(m_oLblPage, "lblPage");
+		m_oLblPage.setWidth(m_oFramePage.getWidth());
+		m_oLblPage.setHeight(m_oFramePage.getHeight());
+		m_oFramePage.attachChild(m_oLblPage);
+		this.attachChild(m_oFramePage);
+		
+		//Juliezhang_20190410 end
+		//Juliezhang_20190412 start task2
+		m_iPageRecordCount=10;
+		//Juliezhang_20190412 end
+	}
+	
+	@Override
+	public boolean clicked(int iChildId, String sNote) {
+		boolean bMatchChild = false;
+		int iTotalList= m_oDisplayTrainList.size();
+		for (FrameFirstPageListener listener : listeners) {
+			// Find the clicked button
+			if (m_oButtonOK.getId() == iChildId) {
+				// Raise the event to parent
+				listener.frameFirstPage_clickOK();
+				bMatchChild = true;
+				break;
+				//Juliezhang_20190411 start task2
+			}else  if (iChildId == m_oImgButtonPrevPage.getId()) {
+				 // PAGE UP
+				if(m_iCurrentPageStartNo-m_iPageRecordCount >= 0) {
+					m_iCurrentPageStartNo -= m_iPageRecordCount;
+					updateTrainListRecord();
+				}
+				bMatchChild = true;
+			} else if (iChildId == m_oImgButtonNextPage.getId()) {
+				 // PAGE DOWN
+					if(m_iCurrentPageStartNo+m_iPageRecordCount < iTotalList) {
+						m_iCurrentPageStartNo += m_iPageRecordCount;
+						updateTrainListRecord();
+					}
+				   bMatchChild = true;
+			}else if(m_oFrameNumberPad.getM_oButtonEnter().getId()==iChildId){
+				if(m_oInputTxtbox.getValue()!=null && !"".equals(m_oInputTxtbox.getValue())) {
+					try {
+						long lValue = Long.parseLong(m_oInputTxtbox.getValue());
+						m_oDisplayTrainList.add(lValue);
+						m_iCurrentPageStartNo=((m_oDisplayTrainList.size()-1)/m_iPageRecordCount)*m_iPageRecordCount;
+						m_oInputTxtbox.setValue("");
+						updateTrainListRecord();
+					}catch (NumberFormatException e) {
+						FormDialogBox oFormDialogBox = new FormDialogBox(AppGlobal.g_oLang.get()._("ok"), null);
+						oFormDialogBox.setTitle(AppGlobal.g_oLang.get()._("error"));
+						oFormDialogBox.setMessage(AppGlobal.g_oLang.get()._("invalid_input"));
+						oFormDialogBox.show();
+						m_oInputTxtbox.setValue("");
+						return false;
+					}
+				}
+			}
+		}
+		//Juliezhang_20190411 end
+		return bMatchChild;
+	}
+	
+	@Override
+	public void FrameTitleHeader_close() {
+		for (FrameFirstPageListener listener : listeners)
+			listener.frameFirstPage_clickOK();
+	}
+	// Juliezhang_20190409start task2
+	public void addInputListTitle() {
+		// Add header
+		ArrayList<Integer> iFieldWidths = new ArrayList<Integer>();
+		ArrayList<String> sFieldValues = new ArrayList<String>();
+		sFieldValues.add(AppGlobal.g_oLang.get()._("line_number"));
+		iFieldWidths.add(150);
+		sFieldValues.add(AppGlobal.g_oLang.get()._("input"));
+		iFieldWidths.add(150);
+		sFieldValues.add(AppGlobal.g_oLang.get()._("response"));
+		iFieldWidths.add(150);
+		
+		m_oTrainListCommonBasket.addHeader(iFieldWidths, sFieldValues);
+		m_oTrainListCommonBasket.addSection(0, StringLib.createStringArray(AppGlobal.LANGUAGE_COUNT, ""), false);
+		m_oTrainListCommonBasket.setUpperlineVisible(true);
+		m_oTrainListCommonBasket.setHeaderFormat(36, 15, "");
+		m_oTrainListCommonBasket.setBottomUnderlineVisible(true);
+	}
+	// Juliezhang_20190409 end
+	// Juliezhang_20190410 start task2
+	/**
+	 * add listing record
+	 * @param iItemIndex
+	 * @param iItemKey
+	 * @param sItemValue
+	 * @param iCheckRoundDecimal
+	 */
+	public void addListRecord(int iItemIndex,int iItemKey ,Long sItemValue) {
+		ArrayList<Integer> iFieldWidths = new ArrayList<Integer>();
+		ArrayList<String> sFieldValues = new ArrayList<String>();
+		ArrayList<String> sFieldAligns = new ArrayList<String>();
+		ArrayList<String> sFieldTypes = new ArrayList<String>();
+		HashMap<Integer, String> sFieldInfo1sArray = new HashMap<Integer, String>();
+		iFieldWidths.add(150);
+		sFieldValues.add(""+iItemKey);
+		sFieldAligns.add(HeroActionProtocol.View.Attribute.TextAlign.CENTER);
+		sFieldTypes.add(HeroActionProtocol.View.Type.LABEL);
+		iFieldWidths.add(150);
+		sFieldValues.add(""+sItemValue);
+		sFieldAligns.add(HeroActionProtocol.View.Attribute.TextAlign.CENTER);
+		sFieldTypes.add(HeroActionProtocol.View.Type.LABEL);
+		iFieldWidths.add(150);
+		if (sItemValue%2==0) 
+			sFieldValues.add(AppGlobal.g_oLang.get()._("even"));
+		else
+			sFieldValues.add(AppGlobal.g_oLang.get()._("odd"));
+		sFieldAligns.add(HeroActionProtocol.View.Attribute.TextAlign.CENTER);
+		sFieldTypes.add(HeroActionProtocol.View.Type.LABEL);
+		m_oTrainListCommonBasket.addItem(0, iItemIndex, m_iTrainListRowHeight, iFieldWidths, sFieldValues, sFieldAligns, sFieldTypes, null);
+	
+		for(Entry<Integer, String> entry:sFieldInfo1sArray.entrySet()){
+			m_oTrainListCommonBasket.setFieldInfo1(0, iItemIndex, entry.getKey(), entry.getValue());
+		}
+		
+		for(int i=0; i<sFieldValues.size(); i++)
+			m_oTrainListCommonBasket.setFieldTextSize(0, iItemIndex, i, 15);
+	}
+	public void setPageNumber(int iNumber) {
+		int iTotalPage = 0;
+		if(iNumber > 0) {
+			iTotalPage = (int)Math.ceil(1.0*m_oDisplayTrainList.size()/m_iPageRecordCount);
+			m_oFramePage.setVisible(true);
+			m_oLblPage.setValue(iNumber + " / " + iTotalPage);
+			m_oLblPage.setVisible(true);
+			m_oImgButtonPrevPage.setVisible(true);
+			m_oImgButtonNextPage.setVisible(true);
+		} else {
+			m_oFramePage.setVisible(false);
+			m_oImgButtonPrevPage.setVisible(false);
+			m_oImgButtonNextPage.setVisible(false);
+		}
+	}
+	// Add Check Record 
+	public void updateTrainListRecord() {
+		int iTotalList=m_oDisplayTrainList.size();
+		removeCheckListRecord();
+		int iCount = 0;
+		for (int i = m_iCurrentPageStartNo; i < m_iCurrentPageStartNo+m_iPageRecordCount && i < iTotalList; i++) {
+			this.addListRecord(iCount, i+1, m_oDisplayTrainList.get(i));
+			iCount++;
+		}
+		updatePageUpDownVisibility();
+	}
+	public void removeCheckListRecord() {
+		m_oTrainListCommonBasket.removeAllItems(0);
+	}
+	public void updatePageUpDownVisibility() {
+		boolean bShowPageUp = false;
+		boolean bShowPageDown = false;
+		int iPage = 0;
+		int iCurrentPanelRecordCount = 0;
+		iCurrentPanelRecordCount = m_oDisplayTrainList.size();
+
+		if(iCurrentPanelRecordCount > m_iPageRecordCount)
+			iPage = (m_iCurrentPageStartNo/m_iPageRecordCount)+1;
+		
+		if(m_iCurrentPageStartNo > 0)
+			bShowPageUp = true;
+		
+		if(iCurrentPanelRecordCount > m_iPageRecordCount && m_iCurrentPageStartNo+m_iPageRecordCount < iCurrentPanelRecordCount)
+			bShowPageDown = true;
+
+		setPageNumber(iPage);
+		showPageUp(bShowPageUp);
+		showPageDown(bShowPageDown);
+	}
+	public void showPageUp(boolean bShow) {
+		if(bShow)
+			m_oImgButtonPrevPage.setSource(AppGlobal.g_oTerm.get().getClientImageURLPath() + "/buttons/swipe_left_button.png");
+		else
+			m_oImgButtonPrevPage.setSource(AppGlobal.g_oTerm.get().getClientImageURLPath() + "/buttons/icon_pageprevious_disabled.png");
+		m_oImgButtonPrevPage.setEnabled(bShow);
+	}
+	
+	public void showPageDown(boolean bShow) {
+		if(bShow)
+			m_oImgButtonNextPage.setSource(AppGlobal.g_oTerm.get().getClientImageURLPath() + "/buttons/swipe_right_button.png");
+		else
+			m_oImgButtonNextPage.setSource(AppGlobal.g_oTerm.get().getClientImageURLPath() + "/buttons/icon_pagenext_disabled.png");
+		m_oImgButtonNextPage.setEnabled(bShow);
+	}
+	@Override
+	public void frameCommonBasketSection_SectionClicked(int iSectionId, String sNote) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void frameCommonBasketCell_FieldClicked(int iBasketId, int iSectionIndex, int iItemIndex, int iFieldIndex,
+			String sNote) {
+		// Juliezhang_20190411 start task2
+        //		#D3D3D3
+		m_oTrainListCommonBasket.setAllFieldsBackgroundColor(iSectionIndex, iItemIndex, "#D3D3D3"); 
+		FormConfirmBox oFormConfirmBox = new FormConfirmBox(AppGlobal.g_oLang.get()._("yes"), AppGlobal.g_oLang.get()._("no"), this.getParentForm());
+		oFormConfirmBox.setTitle(AppGlobal.g_oLang.get()._("attention"));
+		oFormConfirmBox.setMessage(AppGlobal.g_oLang.get()._("confirm_to_delete")+"?");
+		oFormConfirmBox.show();
+		if(oFormConfirmBox.isOKClicked() == false) {
+			m_oTrainListCommonBasket.setAllFieldsBackgroundColor(iSectionIndex, iItemIndex, "#FFFFFF");
+			return;
+		}else{
+			//TreeMap<Integer, String> m_oDisplayTrainListTemp =new TreeMap<Integer, String>();
+			//int iIndex=0;
+			int iSize=m_oDisplayTrainList.size();
+			for (int i = 0; i <iSize; i++) {
+				int iCurrentPageIndex=m_iCurrentPageStartNo+iItemIndex;
+				if (iCurrentPageIndex==i) {
+					m_oDisplayTrainList.remove(m_oDisplayTrainList.get(i));
+					//m_oDisplayTrainListTemp.put(iIndex, m_oDisplayTrainList.get(i));
+					//iIndex++;
+				}
+			}
+			/*
+			 * m_oDisplayTrainList.clear(); if (m_oDisplayTrainListTemp.size()>0)
+			 * m_oDisplayTrainList.putAll(m_oDisplayTrainListTemp);
+			 */
+			if(m_iCurrentPageStartNo==(iSize-1) && m_iCurrentPageStartNo>0) {
+				m_iCurrentPageStartNo=m_iCurrentPageStartNo-m_iPageRecordCount;
+			}
+			updateTrainListRecord();
+		}
+		// Juliezhang_20190411 end
+	}
+
+	@Override
+	public void frameCommonBasketCell_FieldLongClicked(int iBasketId, int iSectionIndex, int iItemIndex,
+			int iFieldIndex, String sNote) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void frameCommonBasketCell_HeaderClicked(int iFieldIndex) {
+		// TODO Auto-generated method stub
+		
+	}
+	public String getInputValue() {
+		return m_sInputValue;
+	}
+	public void setInputValue() {
+		this.m_sInputValue=m_oInputTxtbox.getValue();
+	}
+
+	@Override
+	public void FrameNumberPad_clickEnter() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void FrameNumberPad_clickCancel() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void FrameNumberPad_clickNumber(String string) {
+		// TODO Auto-generated method stub
+		
+	}
+	// Juliezhang_20190410 end
+}

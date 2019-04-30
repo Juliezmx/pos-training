@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<POS>
+	<TEMPLATE>
+		<FRAME class="fraFirstPage">
+			<FRAME class="fraTitleHeader" left="0" top="0" width="1260" height="70"></FRAME>
+			<!--julie_20190409 start  -->
+			<!-- input -->
+			<TEXTBOX class="txtbox" top="160" left="820" width="260" height="45" textSize="24" foreground="#333333" background="#FFFFFF" stroke="1" strokeColor="#979797" cornerRadius="2" style="InputBoxTextBoxStyle"></TEXTBOX>
+			<!-- number keyboard -->
+			<FRAME class="fraNumberPad" top="220" left="700" width="500" height="370" style="NumberPadBackgroundStyle"></FRAME>
+			<!--julie_20190409 end  -->
+			<!--julie_20190410 start  -->
+			<!-- <LABEL class="lblCheckNo" top="34" left="350" width="250" height="33" textSize="24" textAlign="left" foreground="#434343" visible="0"></LABEL> -->
+			<!-- <LABEL class="lblTotalCheck" top="34" left="400" width="250" height="33" textSize="24" textAlign="left" foreground="#434343" visible="0"></LABEL>
+			<LABEL class="lblTotalAmount" top="34" left="400" width="250" height="33" textSize="24" textAlign="right" foreground="#434343" visible="0"></LABEL> -->
+			<!-- listing panel -->
+			<FRAME class="scrfraTrainListPanel" top="140" left="80" width="500" height="410" background="#FFFFFF"></FRAME>
+			<!--Page label  -->
+			<FRAME class="fraPage" top="575" left="270" width="80" height="24" background="#FFFFFF"></FRAME>
+			<LABEL class="lblPage" top="0" left="0" textSize="24" height="53" foreground="#0055B8" textAlign="center" textStyle="bold"></LABEL>
+			<!-- previous page image -->
+			<IMAGE class="ImgPrevPage" top="575" left="230" width="24" height="24" contentMode="scale_aspect_fit"></IMAGE>
+			<!-- next page image -->
+			<IMAGE class="ImgNextPage" top="575" left="370" width="24" height="24" contentMode="scale_aspect_fit"></IMAGE>
+			<!--julie_20190410 end  -->
+			<BUTTON class="btnOK" top="650" left="558" width="144" height="56" textSize="22" background="#02428B"
+					gradient="1" foreground="#FFFFFF" style="InputBoxOKButtonStyle" shadowTop="3" shadowLeft="0"
+					shadowRadius="5" shadowColor="#17000000"></BUTTON>
+		</FRAME>
+	</TEMPLATE>
+</POS>
